@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WBReportSeller_Bot — чистая прибыль с Wildberries каждый день в Telegram</title>
+<meta name="description" content="Бот сам забирает финансовые отчёты Wildberries, вычитает себестоимость, логистику, рекламу, штрафы и налог — и присылает готовую чистую прибыль в Telegram. Каждый день, без Excel." />
+
+<!-- OpenGraph для красивого превью в соцсетях/мессенджерах -->
+<meta property="og:title" content="WBReportSeller_Bot — твоя чистая прибыль с Wildberries каждый день" />
+<meta property="og:description" content="Бот считает реальную прибыль с WB с учётом всех расходов и налога. Отчёт приходит в Telegram автоматически." />
+<meta property="og:type" content="website" />
+
+<!-- =========================================================
+     FACEBOOK PIXEL (META PIXEL)
+     1) Замени PIXEL_ID_СЮДА на ID пикселя из Events Manager
+        (15-16 цифр). Дай этот файл таргетологу — он подскажет ID.
+     2) Больше ничего в этом блоке менять не нужно.
+     ========================================================= -->
+<script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+
+  fbq('init', 'PIXEL_ID_СЮДА');   /* <-- ВСТАВЬ СЮДА ID ПИКСЕЛЯ */
+  fbq('track', 'PageView');       /* отслеживает заход на сайт */
+</script>
+<noscript>
+  <img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=PIXEL_ID_СЮДА&ev=PageView&noscript=1" />
+</noscript>
+<!-- ===================== КОНЕЦ ПИКСЕЛЯ ===================== -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800;900&family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#0A0916;
+  --bg-2:#100D24;
+  --surface:rgba(255,255,255,.045);
+  --surface-2:#171232;
+  --border:rgba(255,255,255,.09);
+  --border-strong:rgba(255,255,255,.16);
+  --violet:#8B5CF6;
+  --violet-bright:#A78BFA;
+  --magenta:#FF2E9A;
+  --gold:#FFC857;
+  --green:#3FE0A0;
+  --text:#ECEAFF;
+  --muted:#9D97C9;
+  --muted-2:#6E6A93;
+  --display:'Unbounded',system-ui,sans-serif;
+  --body:'Onest',system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --maxw:1180px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--body);
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.55;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none}
+img{max-width:100%}
+::selection{background:var(--magenta);color:#fff}
+
+/* ===== Фоновая аврора ===== */
+.aurora{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none}
+.aurora span{position:absolute;border-radius:50%;filter:blur(90px);opacity:.55;mix-blend-mode:screen}
+.aurora .a1{width:55vw;height:55vw;left:-15vw;top:-20vh;background:radial-gradient(circle,#7C3AED,transparent 65%);animation:float1 18s ease-in-out infinite}
+.aurora .a2{width:50vw;height:50vw;right:-12vw;top:5vh;background:radial-gradient(circle,#FF2E9A,transparent 65%);animation:float2 22s ease-in-out infinite}
+.aurora .a3{width:48vw;height:48vw;left:25vw;top:40vh;background:radial-gradient(circle,#4338CA,transparent 65%);animation:float3 26s ease-in-out infinite}
+.grain{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.04;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+@keyframes float1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(6vw,8vh) scale(1.12)}}
+@keyframes float2{0%,100%{transform:translate(0,0) scale(1.05)}50%{transform:translate(-7vw,6vh) scale(.92)}}
+@keyframes float3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4vw,-9vh) scale(1.1)}}
+
+/* ===== Контейнеры / секции ===== */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+.section{padding:108px 0;position:relative}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--violet-bright);padding:7px 14px;border:1px solid var(--border);
+  border-radius:100px;background:var(--surface);margin-bottom:22px;
+}
+.eyebrow b{width:6px;height:6px;border-radius:50%;background:var(--magenta);box-shadow:0 0 10px var(--magenta)}
+h1,h2,h3{font-family:var(--display);font-weight:800;line-height:1.06;letter-spacing:-.02em}
+.h2{font-size:clamp(30px,4.4vw,52px);margin-bottom:18px}
+.lead{font-size:clamp(16px,1.6vw,19px);color:var(--muted);max-width:620px}
+.grad{background:linear-gradient(100deg,var(--violet-bright),var(--magenta) 60%,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ===== Кнопки ===== */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  font-family:var(--body);font-weight:700;font-size:16px;cursor:pointer;
+  padding:16px 28px;border-radius:14px;border:1px solid transparent;
+  transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s,background .25s;
+  white-space:nowrap;
+}
+.btn-main{
+  color:#fff;background:linear-gradient(100deg,var(--violet),var(--magenta));
+  box-shadow:0 12px 34px -10px rgba(255,46,154,.6),0 0 0 1px rgba(255,255,255,.08) inset;
+}
+.btn-main:hover{transform:translateY(-3px) scale(1.015);box-shadow:0 20px 48px -12px rgba(255,46,154,.7)}
+.btn-ghost{color:var(--text);background:var(--surface);border-color:var(--border-strong)}
+.btn-ghost:hover{transform:translateY(-3px);border-color:var(--violet-bright);background:rgba(139,92,246,.12)}
+.btn svg{width:20px;height:20px}
+
+/* ===== Навигация ===== */
+header{position:sticky;top:0;z-index:50;transition:background .3s,border-color .3s,backdrop-filter .3s;border-bottom:1px solid transparent}
+header.scrolled{background:rgba(10,9,22,.72);backdrop-filter:blur(16px);border-bottom-color:var(--border)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:72px}
+.logo{display:flex;align-items:center;gap:11px;font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.02em}
+.logo-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--violet),var(--magenta));display:grid;place-items:center;font-size:18px;box-shadow:0 8px 20px -6px rgba(255,46,154,.6)}
+.nav-links{display:flex;gap:30px;align-items:center}
+.nav-links a{color:var(--muted);font-size:15px;font-weight:500;transition:color .2s}
+.nav-links a:hover{color:var(--text)}
+.nav .btn{padding:11px 20px;font-size:15px}
+.burger{display:none}
+
+/* ===== HERO ===== */
+.hero{padding:64px 0 96px;position:relative}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:54px;align-items:center}
+.hero h1{font-size:clamp(38px,6vw,72px);margin-bottom:24px}
+.hero .lead{font-size:clamp(17px,1.7vw,20px);margin-bottom:34px}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:34px}
+.hero-trust{display:flex;gap:26px;flex-wrap:wrap}
+.hero-trust div{display:flex;flex-direction:column}
+.hero-trust b{font-family:var(--mono);font-size:24px;color:var(--text);font-weight:700}
+.hero-trust span{font-size:13px;color:var(--muted-2)}
+
+/* ===== Телефон / карточка отчёта (фирменный элемент) ===== */
+.phone-wrap{display:flex;justify-content:center;perspective:1400px}
+.phone{
+  width:340px;max-width:100%;border-radius:38px;padding:13px;
+  background:linear-gradient(160deg,#211c45,#0e0b22);
+  border:1px solid var(--border-strong);
+  box-shadow:0 40px 90px -30px rgba(124,58,237,.65),0 0 0 1px rgba(255,255,255,.04) inset;
+  transform:rotateY(-9deg) rotateX(4deg);
+  transition:transform .6s cubic-bezier(.2,.8,.2,1);
+}
+.phone:hover{transform:rotateY(0) rotateX(0)}
+.phone-screen{background:#0b0a18;border-radius:28px;overflow:hidden;border:1px solid var(--border);display:flex;flex-direction:column;height:580px}
+.tg-bar{display:flex;align-items:center;gap:10px;padding:13px 15px;background:linear-gradient(90deg,#1c1840,#15122f);border-bottom:1px solid var(--border);flex:none}
+.tg-ava{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--magenta));display:grid;place-items:center;font-size:16px;flex:none}
+.tg-bar .nm{font-weight:700;font-size:14px}
+.tg-bar .st{font-size:11px;color:var(--green)}
+.tg-body{padding:16px 14px 20px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(139,92,246,.5) transparent}
+.tg-body::-webkit-scrollbar{width:6px}
+.tg-body::-webkit-scrollbar-thumb{background:rgba(139,92,246,.5);border-radius:10px}
+.tg-body::-webkit-scrollbar-track{background:transparent}
+.tg-msg{
+  background:linear-gradient(135deg,#1a1640,#161232);
+  border:1px solid var(--border);border-radius:16px 16px 16px 5px;
+  padding:15px 16px;font-size:13.5px;
+  opacity:0;transform:translateY(14px);
+  animation:msgIn .6s .35s forwards;
+}
+@keyframes msgIn{to{opacity:1;transform:none}}
+.rep-title{font-family:var(--display);font-weight:700;font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.rep-row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+.rep-row span{color:var(--muted)}
+.rep-row b{font-family:var(--mono);font-weight:500;color:var(--text)}
+.rep-profit{margin-top:12px;padding:14px;border-radius:13px;background:linear-gradient(120deg,rgba(255,200,87,.16),rgba(255,46,154,.12));border:1px solid rgba(255,200,87,.35)}
+.rep-profit .lbl{font-size:12px;color:var(--gold);letter-spacing:.04em;text-transform:uppercase;font-family:var(--mono)}
+.rep-profit .val{font-family:var(--display);font-weight:800;font-size:26px;color:var(--gold);line-height:1.1;margin-top:3px}
+.rep-meta{display:flex;justify-content:space-between;gap:10px;margin-top:10px;font-size:12px;color:var(--muted)}
+.rep-meta b{color:var(--green);font-family:var(--mono)}
+.rep-period{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-bottom:12px}
+.rep-mode{font-size:11px;color:var(--muted-2);padding:5px 0 9px;font-style:italic}
+.rep-block{margin-top:12px;padding-top:11px;border-top:1px dashed rgba(255,255,255,.09)}
+.rep-section-title{font-family:var(--display);font-weight:700;font-size:12px;margin-bottom:7px}
+.rep-abc{font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.85}
+.rep-prod{font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:3px}
+.rep-prod b{color:var(--text);font-weight:600}
+.rep-note{display:flex;gap:6px;margin-top:13px;padding-top:11px;border-top:1px dashed rgba(255,255,255,.09);font-size:10.5px;color:var(--muted-2);line-height:1.5}
+
+/* ===== Маркер-лента метрик ===== */
+.marquee{border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:20px 0;overflow:hidden;background:rgba(255,255,255,.015);-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.marquee-track{display:flex;gap:48px;width:max-content;animation:scrollx 32s linear infinite}
+.marquee-track span{font-family:var(--mono);font-size:14px;color:var(--muted);display:flex;align-items:center;gap:48px;text-transform:uppercase;letter-spacing:.1em}
+.marquee-track span::after{content:"●";color:var(--magenta);font-size:8px}
+@keyframes scrollx{to{transform:translateX(-50%)}}
+
+/* ===== Pain → Solution ===== */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:50px}
+.panel{border:1px solid var(--border);border-radius:24px;padding:34px;background:var(--surface)}
+.panel.bad{background:linear-gradient(180deg,rgba(255,46,154,.05),transparent)}
+.panel.good{background:linear-gradient(180deg,rgba(63,224,160,.06),transparent);border-color:rgba(63,224,160,.25)}
+.panel h3{font-size:20px;margin-bottom:18px}
+.panel ul{list-style:none;display:flex;flex-direction:column;gap:13px}
+.panel li{display:flex;gap:12px;font-size:15.5px;color:var(--muted);align-items:flex-start}
+.panel li i{flex:none;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-style:normal;font-size:13px;margin-top:1px}
+.bad li i{background:rgba(255,46,154,.14);color:#ff8da8}
+.good li i{background:rgba(63,224,160,.14);color:var(--green)}
+.good li b{color:var(--text);font-weight:600}
+
+/* ===== Что внутри отчёта ===== */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:46px}
+.metric{border:1px solid var(--border);border-radius:16px;padding:20px 18px;background:var(--surface);transition:transform .3s,border-color .3s,background .3s}
+.metric:hover{transform:translateY(-4px);border-color:var(--violet-bright);background:rgba(139,92,246,.08)}
+.metric .ic{font-size:22px;margin-bottom:12px;display:block}
+.metric h4{font-family:var(--body);font-weight:700;font-size:15px;margin-bottom:5px}
+.metric p{font-size:12.5px;color:var(--muted-2);line-height:1.4}
+
+/* ===== Features ===== */
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:46px}
+.feat{position:relative;border:1px solid var(--border);border-radius:22px;padding:30px 28px;background:var(--surface);overflow:hidden;transition:transform .35s,border-color .35s}
+.feat::before{content:"";position:absolute;inset:0;background:radial-gradient(400px circle at var(--mx,50%) var(--my,0%),rgba(139,92,246,.16),transparent 65%);opacity:0;transition:opacity .35s;pointer-events:none}
+.feat:hover{transform:translateY(-6px);border-color:var(--border-strong)}
+.feat:hover::before{opacity:1}
+.feat .fic{width:50px;height:50px;border-radius:14px;display:grid;place-items:center;font-size:24px;margin-bottom:20px;background:linear-gradient(135deg,rgba(139,92,246,.22),rgba(255,46,154,.18));border:1px solid var(--border)}
+.feat h3{font-size:19px;margin-bottom:11px;font-family:var(--display);font-weight:700}
+.feat p{font-size:15px;color:var(--muted);line-height:1.55}
+
+/* ===== Как это работает ===== */
+.steps{display:flex;flex-direction:column;gap:0;margin-top:46px;max-width:840px}
+.step{display:grid;grid-template-columns:auto 1fr;gap:26px;padding:28px 0;border-top:1px solid var(--border);align-items:start}
+.step:last-child{border-bottom:1px solid var(--border)}
+.step-n{font-family:var(--display);font-weight:800;font-size:clamp(34px,5vw,54px);line-height:1;background:linear-gradient(135deg,var(--violet-bright),var(--magenta));-webkit-background-clip:text;background-clip:text;color:transparent;min-width:72px}
+.step h3{font-size:20px;margin-bottom:8px;font-family:var(--display);font-weight:700}
+.step p{font-size:15.5px;color:var(--muted)}
+
+/* ===== Pricing ===== */
+.pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:46px;align-items:stretch}
+.price{position:relative;border:1px solid var(--border);border-radius:24px;padding:34px 30px;background:var(--surface);display:flex;flex-direction:column;transition:transform .3s,border-color .3s}
+.price:hover{transform:translateY(-6px)}
+.price.best{border-color:var(--magenta);background:linear-gradient(180deg,rgba(255,46,154,.1),rgba(139,92,246,.05));box-shadow:0 30px 70px -30px rgba(255,46,154,.5)}
+.price-tag{position:absolute;top:-13px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:6px 16px;border-radius:100px;background:linear-gradient(100deg,var(--violet),var(--magenta));color:#fff;font-weight:700;white-space:nowrap}
+.price .term{font-family:var(--mono);font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px}
+.price .amount{font-family:var(--display);font-weight:800;font-size:40px;line-height:1;margin-bottom:6px}
+.price .amount small{font-size:18px;color:var(--muted)}
+.price .perm{font-size:13px;color:var(--muted-2);margin-bottom:22px}
+.price ul{list-style:none;display:flex;flex-direction:column;gap:11px;margin-bottom:26px;flex:1}
+.price li{display:flex;gap:10px;font-size:14.5px;color:var(--muted)}
+.price li::before{content:"✓";color:var(--green);font-weight:800;flex:none}
+.price .btn{width:100%}
+
+/* ===== FAQ ===== */
+.faq{max-width:820px;margin:46px auto 0}
+.q{border-bottom:1px solid var(--border)}
+.q summary{list-style:none;cursor:pointer;padding:24px 0;display:flex;justify-content:space-between;align-items:center;gap:18px;font-family:var(--display);font-weight:600;font-size:18px}
+.q summary::-webkit-details-marker{display:none}
+.q .plus{flex:none;width:30px;height:30px;border-radius:9px;border:1px solid var(--border-strong);display:grid;place-items:center;font-size:18px;transition:transform .3s,background .3s;color:var(--violet-bright)}
+.q[open] .plus{transform:rotate(45deg);background:rgba(139,92,246,.15)}
+.q .ans{padding:0 0 24px;color:var(--muted);font-size:15.5px;max-width:680px}
+
+/* ===== Финальный CTA ===== */
+.final{text-align:center;border:1px solid var(--border-strong);border-radius:32px;padding:70px 32px;background:linear-gradient(140deg,rgba(139,92,246,.14),rgba(255,46,154,.1));position:relative;overflow:hidden}
+.final::after{content:"";position:absolute;width:400px;height:400px;background:radial-gradient(circle,var(--magenta),transparent 65%);opacity:.25;filter:blur(70px);bottom:-200px;left:50%;transform:translateX(-50%)}
+.final h2{font-size:clamp(30px,4.5vw,50px);margin-bottom:18px;position:relative}
+.final p{color:var(--muted);font-size:18px;margin-bottom:30px;position:relative}
+.final .btn{position:relative}
+
+/* ===== Footer ===== */
+footer{border-top:1px solid var(--border);padding:46px 0;margin-top:30px}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.foot .muted{color:var(--muted-2);font-size:13.5px}
+.foot-links{display:flex;gap:24px}
+.foot-links a{color:var(--muted);font-size:14px;transition:color .2s}
+.foot-links a:hover{color:var(--text)}
+
+/* ===== Reveal ===== */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s cubic-bezier(.2,.8,.2,1),transform .7s cubic-bezier(.2,.8,.2,1)}
+.reveal.in{opacity:1;transform:none}
+.reveal.d1{transition-delay:.08s}.reveal.d2{transition-delay:.16s}.reveal.d3{transition-delay:.24s}.reveal.d4{transition-delay:.32s}
+
+/* ===== Адаптив ===== */
+@media(max-width:920px){
+  .hero-grid{grid-template-columns:1fr;gap:48px}
+  .phone-wrap{order:-1}
+  .phone{transform:none}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .features{grid-template-columns:1fr 1fr}
+  .pricing{grid-template-columns:1fr}
+  .price.best{order:-1}
+  .nav-links{display:none}
+}
+@media(max-width:640px){
+  .section{padding:74px 0}
+  .split{grid-template-columns:1fr}
+  .features{grid-template-columns:1fr}
+  .metrics{grid-template-columns:1fr}
+  .step{grid-template-columns:1fr;gap:6px}
+  .step-n{min-width:auto}
+  .hero-trust{gap:20px}
+  .foot{flex-direction:column;text-align:center}
+  .btn{width:100%}
+  .hero-cta .btn{width:100%}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  .reveal{opacity:1;transform:none}
+  .tg-msg{opacity:1;transform:none}
+  .bar{transform:scaleY(1)}
+}
+</style>
+</head>
+<body>
+
+<div class="aurora"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
+<div class="grain"></div>
+
+<!-- ===== NAV ===== -->
+<header id="hdr">
+  <div class="wrap nav">
+    <a href="#" class="logo"><span class="logo-mark">📊</span> WBReportSeller<span style="color:var(--magenta)">_Bot</span></a>
+    <nav class="nav-links">
+      <a href="#how">Как работает</a>
+      <a href="#report">Отчёт</a>
+      <a href="#features">Возможности</a>
+      <a href="#pricing">Тарифы</a>
+    </nav>
+    <a class="btn btn-main js-bot" data-ev="nav" href="#pricing">Открыть бота</a>
+  </div>
+</header>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow reveal in"><b></b>Аналитика для продавцов Wildberries</span>
+      <h1 class="reveal in d1">Твоя <span class="grad">чистая прибыль</span> с Wildberries. Каждый день. Без Excel.</h1>
+      <p class="lead reveal in d2">Бот сам забирает финансовые отчёты WB, вычитает себестоимость, логистику, хранение, рекламу, штрафы и налог — и присылает готовую цифру прибыли прямо в Telegram.</p>
+      <div class="hero-cta reveal in d3">
+        <a class="btn btn-main js-bot" data-ev="hero" href="#pricing">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.94 4.6 18.9 19.2c-.23 1.02-.84 1.27-1.7.79l-4.7-3.47-2.27 2.18c-.25.25-.46.46-.94.46l.33-4.78 8.7-7.86c.38-.34-.08-.53-.59-.19L7.27 13.2 2.62 11.74c-1.01-.32-1.03-1.01.21-1.5l18.18-7c.84-.31 1.58.2 1.31 1.36z"/></svg>
+          Открыть бота в Telegram
+        </a>
+        <a class="btn btn-ghost" href="#how">Как это работает</a>
+      </div>
+      <div class="hero-trust reveal in d4">
+        <div><b>12</b><span>показателей в отчёте</span></div>
+        <div><b><span class="count" data-target="0">0</span> мин</b><span>на ручной расчёт</span></div>
+        <div><b>24/7</b><span>отчёты автоматически</span></div>
+      </div>
+    </div>
+
+    <!-- Фирменный элемент: карточка еженедельного отчёта (как в боте) -->
+    <div class="phone-wrap reveal in d2">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="tg-bar">
+            <div class="tg-ava">📊</div>
+            <div><div class="nm">WBReportSeller_Bot</div><div class="st">отчёт сформирован</div></div>
+          </div>
+          <div class="tg-body">
+            <div class="tg-msg" id="repCard">
+              <div class="rep-title">📊 Еженедельный отчёт WB</div>
+              <div class="rep-period">Период: 2026-06-15 — 2026-06-22</div>
+
+              <div class="rep-row"><span>💰 ВБ реализовал</span><b>487 350.00 ₸</b></div>
+              <div class="rep-row"><span>🏦 К перечислению</span><b>392 180.40 ₸</b></div>
+              <div class="rep-row"><span>📦 Продано</span><b>142 шт</b></div>
+              <div class="rep-row"><span>↩️ Возвраты</span><b>3 шт / 4 120.00 ₸</b></div>
+              <div class="rep-row"><span>🚚 Логистика</span><b>61 540.20 ₸</b></div>
+              <div class="rep-row"><span>⚠️ Штрафы</span><b>0.00 ₸</b></div>
+              <div class="rep-row"><span>🧾 Налог</span><b>15 687.22 ₸</b></div>
+              <div class="rep-mode">Режим: 4% от суммы к перечислению</div>
+              <div class="rep-row"><span>🏬 Хранение</span><b>9 820.50 ₸</b></div>
+              <div class="rep-row"><span>📣 Реклама</span><b>28 600.00 ₸</b></div>
+              <div class="rep-row"><span>🏷️ Себестоимость</span><b>124 900.00 ₸</b></div>
+              <div class="rep-row"><span>➕ Компенсации</span><b>0.00 ₸</b></div>
+
+              <div class="rep-profit">
+                <div class="lbl">✅ Чистая прибыль</div>
+                <div class="val">151 632.48 ₸</div>
+              </div>
+              <div class="rep-meta"><span>📈 Маржа от суммы к перечислению</span><b>38.7%</b></div>
+              <div class="rep-row"><span>🏬 Хранение за ед.</span><b>69.16 ₸</b></div>
+
+              <div class="rep-block">
+                <div class="rep-section-title">📊 ABC-анализ по товарам</div>
+                <div class="rep-abc">A: 2 тов. / 118 400.00 ₸<br>B: 1 тов. / 24 100.00 ₸<br>C: 1 тов. / 9 132.48 ₸</div>
+              </div>
+
+              <div class="rep-block">
+                <div class="rep-section-title">A-товары держат основную выручку</div>
+                <div class="rep-prod"><b>ВЕЛЮРОВЫЙ КОСТЮМ</b> (568400112) — 96 720.00 ₸, ДРР 2.4%</div>
+                <div class="rep-prod"><b>ТЕРМОКРУЖКА STEEL</b> (731220985) — 21 680.00 ₸, ДРР 1.8%</div>
+              </div>
+
+              <div class="rep-block">
+                <div class="rep-section-title">ДРР по товарам</div>
+                <div class="rep-prod"><b>ВЕЛЮРОВЫЙ КОСТЮМ</b> — заказ 2.4%, выкуп 3.1%</div>
+                <div class="rep-prod"><b>ТЕРМОКРУЖКА STEEL</b> — заказ 1.8%, выкуп 2.5%</div>
+              </div>
+
+              <div class="rep-note">ℹ️ Посчитано по последнему периоду из WB API. Отчёты WB: 749210334.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Лента метрик ===== -->
+<div class="marquee">
+  <div class="marquee-track">
+    <span>Выручка</span><span>Чистая прибыль</span><span>Маржинальность</span><span>Логистика</span><span>Хранение</span><span>Реклама</span><span>Штрафы</span><span>Налог</span><span>Себестоимость</span><span>Лучший товар</span>
+    <span>Выручка</span><span>Чистая прибыль</span><span>Маржинальность</span><span>Логистика</span><span>Хранение</span><span>Реклама</span><span>Штрафы</span><span>Налог</span><span>Себестоимость</span><span>Лучший товар</span>
+  </div>
+</div>
+
+<!-- ===== Pain → Solution ===== -->
+<section class="section">
+  <div class="wrap">
+    <span class="eyebrow reveal"><b></b>В чём проблема</span>
+    <h2 class="h2 reveal d1">Ты видишь оборот. Но не видишь, <span class="grad">сколько реально заработал</span></h2>
+    <p class="lead reveal d2">WB показывает выручку и «к перечислению». А где налог, логистика, хранение, реклама и штрафы? Большинство продавцов считают прибыль вручную в Excel — и ошибаются.</p>
+    <div class="split">
+      <div class="panel bad reveal d1">
+        <h3>Без бота</h3>
+        <ul>
+          <li><i>✕</i>Скачиваешь отчёты WB и вручную сводишь в Excel</li>
+          <li><i>✕</i>Не учитываешь часть расходов — прибыль выглядит больше, чем есть</li>
+          <li><i>✕</i>Налог считаешь от выручки и переплачиваешь</li>
+          <li><i>✕</i>Не знаешь, какой товар тянет тебя в минус</li>
+          <li><i>✕</i>Тратишь часы каждую неделю на отчёты</li>
+        </ul>
+      </div>
+      <div class="panel good reveal d2">
+        <h3>С WBReportSeller_Bot</h3>
+        <ul>
+          <li><i>✓</i><span><b>Готовый отчёт</b> приходит в Telegram сам, без твоих действий</span></li>
+          <li><i>✓</i><span>Учтены <b>все расходы</b>: логистика, хранение, реклама, штрафы</span></li>
+          <li><i>✓</i><span>Налог считается <b>от суммы к перечислению</b>, а не от выручки</span></li>
+          <li><i>✓</i><span>Сразу видно <b>лучший и худший товар</b></span></li>
+          <li><i>✓</i><span><b>0 минут</b> на расчёты — всё считает бот</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Что внутри отчёта ===== -->
+<section class="section" id="report">
+  <div class="wrap">
+    <span class="eyebrow reveal"><b></b>12 показателей</span>
+    <h2 class="h2 reveal d1">Что внутри <span class="grad">каждого отчёта</span></h2>
+    <p class="lead reveal d2">Один взгляд — и ты понимаешь, как сработал твой магазин. Без таблиц и формул.</p>
+    <div class="metrics">
+      <div class="metric reveal"><span class="ic">💰</span><h4>Выручка</h4><p>Сколько продал за период</p></div>
+      <div class="metric reveal d1"><span class="ic">🏦</span><h4>К перечислению WB</h4><p>Что фактически придёт от WB</p></div>
+      <div class="metric reveal d2"><span class="ic">📦</span><h4>Продажи</h4><p>Количество заказов</p></div>
+      <div class="metric reveal d3"><span class="ic">🏷️</span><h4>Себестоимость</h4><p>По твоим баркодам</p></div>
+      <div class="metric reveal"><span class="ic">🚚</span><h4>Логистика</h4><p>Доставка и возвраты</p></div>
+      <div class="metric reveal d1"><span class="ic">🏬</span><h4>Хранение</h4><p>Платное хранение на складах</p></div>
+      <div class="metric reveal d2"><span class="ic">📣</span><h4>Реклама</h4><p>Расходы на продвижение</p></div>
+      <div class="metric reveal d3"><span class="ic">⚠️</span><h4>Штрафы</h4><p>Удержания и санкции WB</p></div>
+      <div class="metric reveal"><span class="ic">🧾</span><h4>Налог</h4><p>От суммы к перечислению</p></div>
+      <div class="metric reveal d1"><span class="ic">✨</span><h4>Чистая прибыль</h4><p>Итог после всех расходов</p></div>
+      <div class="metric reveal d2"><span class="ic">📈</span><h4>Маржинальность</h4><p>Прибыль в процентах</p></div>
+      <div class="metric reveal d3"><span class="ic">🏆</span><h4>Лучший и худший</h4><p>Какой товар в плюсе, какой в минусе</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Features ===== -->
+<section class="section" id="features">
+  <div class="wrap">
+    <span class="eyebrow reveal"><b></b>Возможности</span>
+    <h2 class="h2 reveal d1">Не просто цифры — <span class="grad">рабочий инструмент</span></h2>
+    <div class="features">
+      <div class="feat reveal"><div class="fic">📅</div><h3>Ежедневный отчёт</h3><p>Как только WB формирует новый финансовый отчёт, бот сам присылает разбор за день. Один раз, без дублей.</p></div>
+      <div class="feat reveal d1"><div class="fic">🗓️</div><h3>Отчёт за неделю</h3><p>Каждый понедельник WB закрывает неделю. Бот собирает все отчёты периода вместе и показывает полную картину.</p></div>
+      <div class="feat reveal d2"><div class="fic">🔑</div><h3>Подключение по API</h3><p>Один раз вставляешь WB API-ключ с доступами «Статистика», «Финансы», «Продвижение» — дальше всё автоматически.</p></div>
+      <div class="feat reveal"><div class="fic">🏷️</div><h3>Себестоимость по баркодам</h3><p>Загружаешь себестоимость в формате «баркод цена» — бот вычитает её из каждой продажи.</p></div>
+      <div class="feat reveal d1"><div class="fic">📥</div><h3>Загрузка Excel-отчёта</h3><p>Нет времени на API? Загрузи готовый Excel/CSV отчёт WB — бот сам найдёт товары и посчитает прибыль.</p></div>
+      <div class="feat reveal d2"><div class="fic">🧾</div><h3>Точный налог</h3><p>Налог считается от суммы к перечислению WB, а не от выручки. Реальная цифра, без переплат.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Как это работает ===== -->
+<section class="section" id="how">
+  <div class="wrap">
+    <span class="eyebrow reveal"><b></b>За 5 минут</span>
+    <h2 class="h2 reveal d1">Как <span class="grad">подключиться</span></h2>
+    <div class="steps">
+      <div class="step reveal"><div class="step-n">01</div><div><h3>Запусти бота</h3><p>Нажми «Открыть бота в Telegram» и подпишись на канал — это нужно для доступа к отчётам.</p></div></div>
+      <div class="step reveal"><div class="step-n">02</div><div><h3>Оформи подписку</h3><p>Выбери тариф, оплати через Kaspi Pay и отправь чек прямо в бот. Доступ откроется после подтверждения.</p></div></div>
+      <div class="step reveal"><div class="step-n">03</div><div><h3>Подключи WB API-ключ</h3><p>Вставь ключ с доступами «Статистика», «Финансы» и «Продвижение». Бот надёжно сохранит его.</p></div></div>
+      <div class="step reveal"><div class="step-n">04</div><div><h3>Добавь себестоимость и налог</h3><p>Отправь себестоимость по баркодам и процент налога — чтобы прибыль считалась точно по твоим цифрам.</p></div></div>
+      <div class="step reveal"><div class="step-n">05</div><div><h3>Получай отчёты</h3><p>Дальше бот всё делает сам: ежедневные и еженедельные отчёты приходят в Telegram автоматически.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Pricing ===== -->
+<section class="section" id="pricing">
+  <div class="wrap">
+    <span class="eyebrow reveal"><b></b>Тарифы</span>
+    <h2 class="h2 reveal d1">Выбери <span class="grad">свой период</span></h2>
+    <p class="lead reveal d2">Оплата через Kaspi Pay. Один продавец окупает подписку, найдя всего один убыточный товар.</p>
+    <div class="pricing">
+      <div class="price reveal">
+        <div class="term">1 месяц</div>
+        <div class="amount">9 990 <small>₸</small></div>
+        <div class="perm">попробовать без долгих обязательств</div>
+        <ul>
+          <li>Ежедневные отчёты</li>
+          <li>Еженедельные отчёты</li>
+          <li>Расчёт чистой прибыли</li>
+          <li>Загрузка Excel-отчётов</li>
+        </ul>
+        <a class="btn btn-ghost js-bot" data-ev="price_1m" href="#">Выбрать</a>
+      </div>
+      <div class="price best reveal d1">
+        <div class="price-tag">Выгоднее всего</div>
+        <div class="term">3 месяца</div>
+        <div class="amount">24 990 <small>₸</small></div>
+        <div class="perm">≈ 8 330 ₸ в месяц · экономия 17%</div>
+        <ul>
+          <li>Всё из тарифа на месяц</li>
+          <li>Полная аналитика по сезону</li>
+          <li>История прибыли за квартал</li>
+          <li>Приоритетная поддержка</li>
+        </ul>
+        <a class="btn btn-main js-bot" data-ev="price_3m" href="#">Выбрать</a>
+      </div>
+      <div class="price reveal d2">
+        <div class="term">1 год</div>
+        <div class="amount">87 990 <small>₸</small></div>
+        <div class="perm">≈ 7 330 ₸ в месяц · максимальная выгода</div>
+        <ul>
+          <li>Всё из тарифа на 3 месяца</li>
+          <li>Аналитика за весь год</li>
+          <li>Лучшая цена за месяц</li>
+          <li>Приоритетная поддержка</li>
+        </ul>
+        <a class="btn btn-ghost js-bot" data-ev="price_1y" href="#">Выбрать</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section class="section">
+  <div class="wrap">
+    <span class="eyebrow reveal"><b></b>Вопросы</span>
+    <h2 class="h2 reveal d1">Частые <span class="grad">вопросы</span></h2>
+    <div class="faq">
+      <details class="q reveal"><summary>Это безопасно — давать боту API-ключ?<span class="plus">+</span></summary><div class="ans">Ключ нужен только для чтения статистики, финансов и продвижения — он не даёт прав менять товары или цены. Бот хранит ключ в базе и использует его лишь для формирования твоих отчётов.</div></details>
+      <details class="q reveal"><summary>Откуда бот берёт данные?<span class="plus">+</span></summary><div class="ans">Напрямую из официальных финансовых отчётов Wildberries по твоему API-ключу. Как только WB формирует новый ежедневный или недельный отчёт, бот забирает его и присылает разбор.</div></details>
+      <details class="q reveal"><summary>А если я не хочу подключать API?<span class="plus">+</span></summary><div class="ans">Можно работать без API: просто загрузи в бот Excel/CSV отчёт WB. Бот найдёт товары, спросит себестоимость и налог по ним и посчитает чистую прибыль за этот файл.</div></details>
+      <details class="q reveal"><summary>Как считается налог?<span class="plus">+</span></summary><div class="ans">Налог считается от суммы «к перечислению WB», а не от выручки. Ты указываешь свой процент один раз — и расчёт всегда честный, без переплат.</div></details>
+      <details class="q reveal"><summary>Как оплатить?<span class="plus">+</span></summary><div class="ans">Выбираешь тариф в боте, оплачиваешь через Kaspi Pay и отправляешь чек прямо в чат. После подтверждения доступ открывается до конца оплаченного периода.</div></details>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Final CTA ===== -->
+<section class="section">
+  <div class="wrap">
+    <div class="final reveal">
+      <h2>Узнай свою настоящую прибыль <span class="grad">уже сегодня</span></h2>
+      <p>Подключение занимает 5 минут. Первый отчёт — в тот же день.</p>
+      <a class="btn btn-main js-bot" data-ev="final" href="#">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.94 4.6 18.9 19.2c-.23 1.02-.84 1.27-1.7.79l-4.7-3.47-2.27 2.18c-.25.25-.46.46-.94.46l.33-4.78 8.7-7.86c.38-.34-.08-.53-.59-.19L7.27 13.2 2.62 11.74c-1.01-.32-1.03-1.01.21-1.5l18.18-7c.84-.31 1.58.2 1.31 1.36z"/></svg>
+        Открыть бота в Telegram
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<footer>
+  <div class="wrap foot">
+    <a href="#" class="logo"><span class="logo-mark">📊</span> WBReportSeller<span style="color:var(--magenta)">_Bot</span></a>
+    <div class="foot-links">
+      <a href="#how">Как работает</a>
+      <a href="#pricing">Тарифы</a>
+      <a href="#" class="js-bot" data-ev="footer">Telegram-бот</a>
+    </div>
+    <span class="muted">© 2026 WBReportSeller_Bot · Аналитика для продавцов Wildberries</span>
+  </div>
+</footer>
+
+<script>
+/* =========================================================
+   1) ССЫЛКИ — ЗАМЕНИ НА СВОИ
+   ========================================================= */
+const BOT_URL     = "https://t.me/WBReportSeller_Bot"; // <-- ссылка на твоего бота
+const CHANNEL_URL = "https://t.me/ВАШ_КАНАЛ";      // (если нужна где-то отдельно)
+
+/* Подставляем ссылку бота во все кнопки .js-bot и вешаем пиксель-событие */
+document.querySelectorAll('.js-bot').forEach(el=>{
+  el.setAttribute('href', BOT_URL);
+  el.setAttribute('target','_blank');
+  el.setAttribute('rel','noopener');
+  el.addEventListener('click', ()=>{
+    /* Это событие увидит таргетолог в Facebook как заявку/переход */
+    if (typeof fbq === 'function') {
+      fbq('track', 'Lead', { source: el.dataset.ev || 'cta' });
+    }
+  });
+});
+
+/* =========================================================
+   2) Анимации интерфейса
+   ========================================================= */
+const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* Шапка при скролле */
+const hdr = document.getElementById('hdr');
+addEventListener('scroll', ()=> hdr.classList.toggle('scrolled', scrollY > 10));
+
+/* Появление секций */
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }});
+},{threshold:.15});
+document.querySelectorAll('.reveal:not(.in)').forEach(el=>io.observe(el));
+
+/* Счётчики чисел */
+function animateCount(el){
+  const target = +el.dataset.target;
+  if(reduced){ el.textContent = target.toLocaleString('ru-RU'); return; }
+  const dur = 1400; const start = performance.now();
+  function tick(now){
+    const p = Math.min((now-start)/dur, 1);
+    const eased = 1 - Math.pow(1-p, 3);
+    el.textContent = Math.round(target*eased).toLocaleString('ru-RU');
+    if(p<1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+const countIO = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ animateCount(e.target); countIO.unobserve(e.target); }});
+},{threshold:.6});
+document.querySelectorAll('.count').forEach(el=>countIO.observe(el));
+
+/* Подсветка карточек "возможностей" под курсором */
+document.querySelectorAll('.feat').forEach(card=>{
+  card.addEventListener('mousemove', e=>{
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', (e.clientX-r.left)+'px');
+    card.style.setProperty('--my', (e.clientY-r.top)+'px');
+  });
+});
+
+/* Подстраховка: если счётчик не успел отработать — просто показать число */
+setTimeout(()=>{
+  document.querySelectorAll('.count').forEach(el=>{
+    if(!el.textContent.trim()){
+      el.textContent = (+el.dataset.target).toLocaleString('ru-RU');
+    }
+  });
+}, 2500);
+</script>
+</body>
+</html>
