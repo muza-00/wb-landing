@@ -289,6 +289,9 @@ footer{border-top:1px solid var(--border);padding:46px 0;margin-top:30px}
   .pricing{grid-template-columns:1fr}
   .price.best{order:-1}
   .nav-links{display:none}
+  .nav{gap:12px}
+  .logo{font-size:17px;min-width:0}
+  .nav .btn{padding:10px 16px;font-size:14px;flex:0 0 auto}
 }
 @media(max-width:640px){
   .section{padding:74px 0}
@@ -301,6 +304,15 @@ footer{border-top:1px solid var(--border);padding:46px 0;margin-top:30px}
   .foot{flex-direction:column;text-align:center}
   .btn{width:100%}
   .hero-cta .btn{width:100%}
+  .nav{gap:8px}
+  .logo{font-size:15px;gap:7px}
+  .logo-mark{width:28px;height:28px;font-size:15px;flex:0 0 auto}
+  .nav .btn{width:auto;padding:9px 14px;font-size:13px;flex:0 0 auto;white-space:nowrap}
+}
+@media(max-width:380px){
+  .logo{font-size:13.5px;gap:6px}
+  .logo-mark{width:26px;height:26px;font-size:14px}
+  .nav .btn{padding:8px 12px;font-size:12.5px}
 }
 
 @media(prefers-reduced-motion:reduce){
